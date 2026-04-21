@@ -21,7 +21,8 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "cropperjs": "^1.6.2",
-    "electron-updater": "^6.3.9"
+    "electron-updater": "^6.3.9",
+    "javascript-natural-sort": "^0.7.1"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^2.1.0",

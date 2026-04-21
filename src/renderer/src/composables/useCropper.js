@@ -26,11 +26,13 @@ export function useCropper(imageRef) {
       scalable: false, // 禁用缩放选区
       rotatable: true, // 支持旋转图片
       background: false, // 禁用背景
+      checkCrossOrigin: false, // 禁用跨域检查，支持自定义协议
+      
       ready() {
         // Cropper初始化完成时的回调
         console.log('漫画图片加载完成，裁剪器就绪')
         // 自动适配屏幕大小
-        fitToScreen()
+       fitToScreen()
       }
     })
   }
@@ -60,7 +62,14 @@ export function useCropper(imageRef) {
         setTimeout(fitToScreen, 200)
         return
       }
-
+      if (imageData.naturalHeight/imageData.naturalWidth > 1.5) {
+        let  r = containerData.width / imageData.naturalWidth;
+        cropper.value.zoomTo(r);
+       cropper.value.moveTo(
+       0,0
+      )
+        return
+      }
       // 计算缩放比例（取宽高较小值，确保图片完全显示）
       const ratio = Math.min(
         containerData.width / imageData.naturalWidth,
@@ -110,10 +119,10 @@ export function useCropper(imageRef) {
 
     if (isCropping.value) {
       // 启用裁剪模式，显示选区框
-      cropper.value.crop()
+     // cropper.value.crop()
     } else {
       // 禁用裁剪模式，清除选区框
-      cropper.value.clear()
+      //cropper.value.clear()
     }
   }
 

@@ -1,47 +1,30 @@
-import { ref, watch } from 'vue';
+import { ref} from 'vue';
 
 /**
  * 分页管理composable
  * 负责页面导航和缓存加载
  */
-export function usePagination(imageCache) {
+export function usePagination(mangaSet) {
   const currentPage = ref(1);
   const totalPages = ref(100);
-
-  // ========================
-  // 页面加载（优先从缓存）
-  // ========================
   const loadPageFromCache = async () => {
-    // 优先从缓存获取
-    const cachedImage = imageCache.getImageFromCache(currentPage.value);
-    if (cachedImage) {
-      console.log(`从缓存加载第 ${currentPage.value} 页`);
-      return cachedImage;
-    } else {
-      // 缓存没有就启动预取
-      console.log(`缓存中没有第 ${currentPage.value} 页，触发预取`);
-      await imageCache.prefetchImagesToCache(currentPage.value, totalPages.value);
-      const retryImage = imageCache.getImageFromCache(currentPage.value);
-      if (retryImage) {
-        return retryImage;
-      }
-    }
+    // 对于本地文件，直接返回，无需缓存
     return null;
   };
 
   // 上一页
-  const prevPage = async () => {
+  const prevPage = () => {
     if (currentPage.value > 1) {
       currentPage.value--;
-      return await loadPageFromCache();
+      mangaSet.switchPage(-1);
     }
   };
 
   // 下一页
-  const nextPage = async () => {
+  const nextPage = () => {
     if (currentPage.value < totalPages.value) {
       currentPage.value++;
-      return await loadPageFromCache();
+       mangaSet.switchPage(1);
     }
   };
 

@@ -1,5 +1,5 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
+import { app, shell, BrowserWindow, ipcMain, protocol } from 'electron'
+import { join, dirname } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { RegisterHandel } from "./handel.js";
@@ -42,6 +42,14 @@ function createWindow() {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
+
+  // Register custom protocol for manga images
+  protocol.registerFileProtocol('manga', (request, callback) => {
+    const relativePath = decodeURIComponent(request.url.substr(8)); // 'manga://' is 8 chars
+    const projectRoot = app.getAppPath();
+    const fullPath = join(projectRoot, relativePath);
+    callback({ path: fullPath });
+  });
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.

@@ -24,19 +24,15 @@ export function useKeyboard(pagination, cropper) {
         break
 
       // +/- 缩放
-      case 'w':
-      case 'W':
       case '+':
       case '=':
         e.preventDefault()
-        cropper.zoom(1)
+        cropper.zoom(0.1)
         break
       case '-':
       case '_':
-      case 's':
-      case 'S':
         e.preventDefault()
-        cropper.zoom(-1)
+        cropper.zoom(-0.1)
         break
 
       // Ctrl+R 旋转
@@ -77,6 +73,21 @@ export function useKeyboard(pagination, cropper) {
         break
       default:
         break
+      case 'w':
+        e.preventDefault()
+        cropper.move(0, 20)
+        break
+      case 's':
+        e.preventDefault()
+        cropper.move(0, -10)
+        break
+       case 'W':
+        e.preventDefault()
+        cropper.move(0, 20)
+        break
+      case 'S':
+        e.preventDefault()
+        cropper.move(0, -10)
     }
   }
 

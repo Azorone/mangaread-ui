@@ -1,33 +1,147 @@
 <script setup>
 import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue';
-import { useImageCache } from '../composables/useImageCache';
 import { useCropper } from '../composables/useCropper';
 import { useLightbox } from '../composables/useLightbox';
 import { usePagination } from '../composables/usePagination';
 import { useSidebar } from '../composables/useSidebar';
 import { useKeyboard } from '../composables/useKeyboard';
+import { useMangaSet } from '../composables/useMangaSet';
 import 'cropperjs/dist/cropper.css';
+
 
 // ========================
 // 初始化 Composables
 // ========================
+const mangaSet = useMangaSet();
 const imageRef = ref(null);
-const imageCache = useImageCache();
-const pagination = usePagination(imageCache);
-const sidebar = useSidebar(imageCache, pagination);
+const pagination = usePagination(mangaSet);
+const sidebar = useSidebar(mangaSet, pagination);
 const cropper = useCropper(imageRef);
 const lightbox = useLightbox(cropper.croppedList);
 const keyboard = useKeyboard(pagination, cropper);
+const showImportPanel = ref(false);
+const importDropActive = ref(false);
+const selectedFolders = ref([]);
+const dragCounter = ref(0);
 
+const preventDefault = (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+};
+
+const openImportDialog = async () => {
+  try {
+    const result = await window.api.openFolderDialog();
+    if (result && Array.isArray(result.filePaths)) {
+      result.filePaths.forEach(path => handleImportedFolder(path));
+    }
+  } catch (error) {
+    console.error('打开文件夹选择器失败：', error);
+  }
+};
+
+const handleImportedFolder = (folderPath) => {
+  if (!folderPath || selectedFolders.value.includes(folderPath)) return;
+  selectedFolders.value.push(folderPath);
+};
+
+const importFolder = async (folder) => {
+  try {
+    const result = await window.api.importFolders([folder]);
+    if (result && result.length > 0) {
+      const res = result[0];
+      if (res.success) {
+        console.log('导入成功：', res.destPath);
+        // 移除已导入的文件夹
+        const index = selectedFolders.value.indexOf(folder);
+        if (index > -1) {
+          selectedFolders.value.splice(index, 1);
+        }
+        // 刷新漫画列表
+        await sidebar.refreshMangaList();
+      } else {
+        console.error('导入失败：', res.error);
+        alert(`导入失败：${res.error}`);
+      }
+    }
+  } catch (error) {
+    console.error('导入过程中出错：', error);
+    alert(`导入过程中出错：${error.message}`);
+  }
+};
+
+const batchImport = async () => {
+  try {
+    console.log(selectedFolders.value)
+    const result = await window.api.importFolders(selectedFolders.value);
+    let successCount = 0;
+    let failCount = 0;
+    result.forEach(res => {
+      if (res.success) {
+        console.log('导入成功：', res.destPath);
+        successCount++;
+      } else {
+        console.error('导入失败：', res.error);
+        failCount++;
+      }
+    });
+    selectedFolders.value = [];
+    showImportPanel.value = false;
+    // 刷新漫画列表
+    await sidebar.refreshMangaList();
+    alert(`批量导入完成：成功 ${successCount} 个，失败 ${failCount} 个`);
+  } catch (error) {
+    console.error('批量导入过程中出错：', error);
+    alert(`批量导入过程中出错：${error.message}`);
+  }
+};
+
+const handleDragEnter = (event) => {
+  preventDefault(event);
+  dragCounter.value++;
+  importDropActive.value = true;
+};
+
+const handleDragLeave = (event) => {
+  preventDefault(event);
+  dragCounter.value--;
+  if (dragCounter.value === 0) {
+    importDropActive.value = false;
+  }
+};
+
+const handleDrop = async (event) => {
+  preventDefault(event);
+  dragCounter.value = 0;
+  importDropActive.value = false;
+  const files = Array.from(event.dataTransfer?.files || []);
+  for(let i = 0;i <files.length;i++){
+    console.log(files[i])
+     let path = await window.api.getPathForFile(files[i]);
+    console.log('拖入文件：', path);
+    if (path) {
+      handleImportedFolder(path);
+    }
+  }
+};
+ 
 // ========================
 // 计算属性 - 当前漫画页面URL
 // ========================
+   
 const currentMangaPage = computed(() => {
-  const imageData = imageCache.getImageUrlByPage(pagination.currentPage.value);
-  if (imageData) {
-    return imageData.url;
+  try{
+     const imageUrl = mangaSet.getImagesUrl(mangaSet.MangaIndex.value, mangaSet.ChapterIndex.value, mangaSet.PageIndex.value);
+  console.log(`当前页面: ${pagination.currentPage.value}, 图片URL: ${imageUrl}`);
+  if (imageUrl && !imageUrl.startsWith('manga://')) {
+    return `manga://${imageUrl}`;
   }
-  return '';
+  return imageUrl;
+  }catch(error){
+    console.error('计算当前漫画页面URL时出错：', error);
+    return '';
+  }
+
 });
 
 // ========================
@@ -36,41 +150,19 @@ const currentMangaPage = computed(() => {
 onMounted(async () => {
   // 初始化Cropper
   cropper.initCropper();
-
+  await mangaSet.initializeMangaSet();
+  await sidebar.initSidebar();
   // 监听视口大小变化，自动重新适配
   window.addEventListener('resize', cropper.fitToScreen);
   
   // 初始化时先获取漫画图片列表，然后预取和加载第一页
-  try {
-    await imageCache.fetchMangaImageList(imageCache.currentMangaId.value);
-    pagination.totalPages.value = imageCache.mangaImageList.value.length;
-    
-    await imageCache.prefetchImagesToCache(
-      pagination.currentPage.value,
-      pagination.totalPages.value
-    );
-    
-    await pagination.loadPageFromCache();
-  } catch (error) {
-    console.error('初始化缓存时出错：', error);
-  }
-  
-  // 定期补充缓存（每3秒检查一次是否需要补充）
-  const prefetchInterval = setInterval(() => {
-    imageCache.prefetchImagesToCache(
-      pagination.currentPage.value,
-      pagination.totalPages.value
-    );
-  }, 3000);
 
-  
+
   // 保存interval ID以便在卸载时清理
-  window._prefetchIntervalId = prefetchInterval;
+  window._prefetchIntervalId = null;
   
   // 设置键盘事件监听
   keyboard.setupKeyboardListener();
-
-  await getVersion();
 
 });
 
@@ -84,29 +176,18 @@ onBeforeUnmount(() => {
   // 移除事件监听器
   window.removeEventListener('resize', cropper.fitToScreen);
   keyboard.removeKeyboardListener();
-  
-  // 清理预取的定时器
-  if (window._prefetchIntervalId) {
-    clearInterval(window._prefetchIntervalId);
-    delete window._prefetchIntervalId;
-  }
 });
 
 // ========================
 // 数据监听 - 当漫画页面URL改变时
 // ========================
 watch(currentMangaPage, (newUrl) => {
+  console.log('漫画页面URL已更新：', newUrl);
   if (cropper.cropper.value) {
     // 替换Cropper中的图片为新URL
     cropper.cropper.value.replace(newUrl);
   }
 });
-
-async function getVersion() {
-  console.log("apoi " + window.api);
-   let v = await window.api.getAppVersion();
-   alert(`当前版本：${v}`);
-}
 
 </script>
 
@@ -132,6 +213,9 @@ async function getVersion() {
         <!-- 缓存设置按钮 -->
         <button @click="imageCache.showCacheSettings.value = true" title="设置图片缓存">
           ⚙️ 缓存设置
+        </button>
+        <button @click="showImportPanel = true" title="导入漫画文件夹">
+          📥 导入
         </button>
       </div>
 
@@ -220,12 +304,12 @@ async function getVersion() {
       <div class="sidebar-content">
         <ul class="contents-list">
           <li 
-            v-for="(content, index) in sidebar.contentsList.value" 
+            v-for="(content, index) in sidebar.chapterList.value" 
             :key="index"
             class="contents-item"
             @click="sidebar.selectContent(content)"
           >
-            {{ content.title }}
+            {{ content }}
           </li>
         </ul>
       </div>
@@ -246,9 +330,10 @@ async function getVersion() {
             v-for="manga in sidebar.mangaList.value" 
             :key="manga.id"
             class="manga-item"
+         
             @click="sidebar.selectManga(manga)"
           >
-            <div class="manga-title">{{ manga.title }}</div>
+            <div class="manga-title">{{ manga }}</div>
           </li>
         </ul>
       </div>
@@ -292,61 +377,33 @@ async function getVersion() {
       @click="sidebar.showContents.value = false; sidebar.showMangaList.value = false; sidebar.showHistory.value = false"
     ></div>
 
-    <!-- ==================== 图片缓存设置面板 ==================== -->
-    <!-- 缓存设置弹窗（模态对话框） -->
-    <div v-if="imageCache.showCacheSettings.value" class="cache-settings-modal">
-      <!-- 背景遮罩 -->
-      <div class="cache-settings-overlay" @click="imageCache.showCacheSettings.value = false"></div>
-      
-      <!-- 设置面板内容 -->
-      <div class="cache-settings-panel">
-        <div class="cache-settings-header">
-          <h3>⚙️ 图片缓存设置</h3>
-          <button class="close-btn" @click="imageCache.showCacheSettings.value = false" title="关闭">✕</button>
-        </div>
-        
-        <div class="cache-settings-body">
-          <!-- 预取数量设置 -->
-          <div class="setting-item">
-            <label for="prefetches">预取图片数量：</label>
-            <input 
-              id="prefetches"
-              type="number" 
-              v-model.number="imageCache.prefetchCountSetting.value" 
-              min="1" 
-              max="20"
-              class="setting-input"
-            />
-            <span class="setting-hint">（1-20张）</span>
+  
+
+    <div v-if="showImportPanel" class="import-modal">
+      <div class="import-overlay" @click="showImportPanel = false"></div>
+      <div
+        class="import-panel"
+        @dragenter="handleDragEnter"
+        @dragover="preventDefault"
+        @dragleave="handleDragLeave"
+        @drop="handleDrop"
+      >
+        <div :class="['import-drop-area', { 'drag-over': importDropActive.value }]">
+          <div v-if="selectedFolders.length === 0">
+            <div class="import-icon" @click="openImportDialog">📁</div>
+            <div class="import-text">点击选择文件夹或直接将文件夹拖入此处</div>
           </div>
-          
-          <!-- 最大缓存数设置 -->
-          <div class="setting-item">
-            <label for="maxcache">最大缓存数量：</label>
-            <input 
-              id="maxcache"
-              type="number" 
-              v-model.number="imageCache.maxCacheSizeSetting.value" 
-              :min="imageCache.prefetchCountSetting.value"
-              max="100"
-              class="setting-input"
-            />
-            <span class="setting-hint">（{{ imageCache.prefetchCountSetting.value }}-100张）</span>
-          </div>
-          
-          <!-- 缓存统计信息 -->
-          <div class="cache-status">
-            <p>缓存图片数：<strong>{{ imageCache.imageCacheQueue.value.length }} / {{ imageCache.maxCacheSizeSetting.value }}</strong> 张</p>
-            <p>内存占用：<strong>{{ (imageCache.cacheSizeInBytes.value / 1024 / 1024).toFixed(2) }}</strong> MB</p>
-            <div class="cache-progress">
-              <div class="progress-bar" :style="{ width: (imageCache.imageCacheQueue.value.length / imageCache.maxCacheSizeSetting.value * 100) + '%' }"></div>
+          <div v-else class="import-list">
+            <div class="import-item" v-for="(folder, index) in selectedFolders" :key="index">
+              <span class="folder-path">{{ folder }}</span>
+              <button class="btn-import" @click="importFolder(folder)">导入</button>
+              <button class="btn-remove" @click="removeFolder(index)">取消</button>
             </div>
           </div>
         </div>
-        
-        <div class="cache-settings-footer">
-          <button class="btn-primary" @click="imageCache.saveCacheSettings(pagination.currentPage.value, pagination.totalPages.value)">保存设置</button>
-          <button class="btn-secondary" @click="imageCache.showCacheSettings.value = false">取消</button>
+        <div class="import-footer">
+          <button class="btn-primary" @click="batchImport" :disabled="selectedFolders.length === 0">批量导入</button>
+          <button class="btn-secondary" @click="showImportPanel = false">关闭</button>
         </div>
       </div>
     </div>
@@ -747,6 +804,12 @@ img {
   background-color: #333;
 }
 
+/* 激活状态（当前选中的漫画） */
+.manga-item.active {
+  background-color: #007acc;
+  color: #fff;
+}
+
 /* 漫画标题 */
 .manga-title {
   /* 文字颜色 */
@@ -1126,6 +1189,127 @@ img {
 .btn-secondary:hover {
   /* 悬停时变亮 */
   background-color: #4a4a4a;
+}
+
+.import-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 520;
+}
+
+.import-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+
+.import-panel {
+  position: relative;
+  width: min(480px, 90%);
+  background-color: #2c2c2c;
+  border: 1px solid #3c3c3c;
+  border-radius: 12px;
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.7);
+  padding: 30px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  z-index: 521;
+}
+
+.import-drop-area {
+  width: 100%;
+  min-height: 220px;
+  border: 2px dashed #555;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  gap: 12px;
+  background-color: #1c1c1c;
+  color: #ddd;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.import-drop-area.drag-over {
+  border-color: #007acc;
+  background-color: rgba(0, 122, 204, 0.08);
+}
+
+.import-icon {
+  font-size: 48px;
+  user-select: none;
+}
+
+.import-text {
+  font-size: 15px;
+  color: #ccc;
+  line-height: 1.5;
+}
+
+.import-list {
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.import-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background-color: #2a2a2a;
+  border-radius: 4px;
+}
+
+.folder-path {
+  flex: 1;
+  font-size: 12px;
+  color: #ccc;
+  word-break: break-all;
+}
+
+.btn-import, .btn-remove {
+  padding: 4px 8px;
+  font-size: 12px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.btn-import {
+  background-color: #007acc;
+  color: white;
+}
+
+.btn-remove {
+  background-color: #555;
+  color: white;
+}
+
+.import-footer {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 /* ==================== 灯箱（全屏预览）样式 ==================== */

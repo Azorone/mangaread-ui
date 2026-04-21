@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer,webUtils } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
@@ -21,6 +21,35 @@ const api = {
     const userDataPath = await ipcRenderer.invoke('getUserDataPath')
     console.log('User Data Path:', userDataPath)
     return userDataPath
+  },
+  openFolderDialog: async () => {
+    const result = await ipcRenderer.invoke('openFolderDialog')
+    console.log('Open folder dialog result:', result)
+    return result
+  },
+  importFolders: async (folders) => {
+    const result = await ipcRenderer.invoke('importFolders', folders)
+    console.log('Import folders result:', result)
+    return result
+  },
+  getMangaList: async () => {
+    const result = await ipcRenderer.invoke('getMangaList')
+    console.log('Get manga list result:', result)
+    return result
+  },
+  getMangaImages: async (mangaId) => {
+    const result = await ipcRenderer.invoke('getMangaImages', mangaId)
+    console.log('Get manga images result:', result)
+    return result
+  },
+  getMangaStructure: async () => {
+    const result = await ipcRenderer.invoke('getMangaStructure')
+    console.log('Get manga structure result:', result)
+    return result
+  },
+  getPathForFile: async (file) =>{ const s = webUtils.getPathForFile(file)
+    console.log('获取文件路径：', s);
+    return s
   }
 }
 
