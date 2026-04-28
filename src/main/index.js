@@ -1,8 +1,9 @@
 import { app, shell, BrowserWindow, ipcMain, protocol } from 'electron'
-import { join, dirname } from 'path'
+import { join} from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { RegisterHandel } from "./handel.js";
+import path from 'path';
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -46,9 +47,23 @@ app.whenReady().then(() => {
   // Register custom protocol for manga images
   protocol.registerFileProtocol('manga', (request, callback) => {
     const relativePath = decodeURIComponent(request.url.substr(8)); // 'manga://' is 8 chars
+    const { app } = require("electron");
+  // 检查是否是开发环境
+    const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+  
+  if (isDev) {
     const projectRoot = app.getAppPath();
     const fullPath = join(projectRoot, relativePath);
     callback({ path: fullPath });
+  } else {
+    // 生产环境：在exe文件所在目录的同级目录下
+    const exeDir = path.dirname(app.getPath('exe'));
+    const fullPath = join(exeDir, relativePath);
+    callback({ path: fullPath });
+  }
+
+
+
   });
 
   // Default open or close DevTools by F12 in development

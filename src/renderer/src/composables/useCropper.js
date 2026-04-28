@@ -139,7 +139,7 @@ export function useCropper(imageRef) {
   // ========================
   // 获取裁剪后的图片
   // ========================
-  const getCroppedImage = () => {
+  const getCroppedImage = async () => {
     // 确保Cropper实例存在
     if (!cropper.value) return
 
@@ -166,9 +166,24 @@ export function useCropper(imageRef) {
         return
       }
 
-      // 将新裁剪的图片添加到列表开头（最新的在前）
-      croppedList.value.unshift(base64)
-      console.log('图片已保存，当前列表数:', croppedList.value.length)
+      // 生成唯一文件名
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `cropped-${timestamp}.png`;
+
+      // 保存图片到Screenshots目录
+      try {
+        const saveResult = await window.api.saveCroppedImage(base64, filename);
+        if (saveResult.success) {
+          console.log('Image saved to:', saveResult.filePath);
+          // 将新裁剪的图片添加到列表开头（最新的在前）
+          croppedList.value.unshift({ path: saveResult.filePath, base64 });
+          console.log('图片已保存，当前列表数:', croppedList.value.length);
+        } else {
+          console.error('Save failed:', saveResult.error);
+        }
+      } catch (error) {
+        console.error('Save error:', error);
+      }
     } catch (error) {
       console.error('获取裁剪图片时出错：', error)
     }

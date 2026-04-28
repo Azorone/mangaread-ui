@@ -2,6 +2,40 @@ const { ipcMain } = require("electron");
 const path = require('path');
 const fs = require('fs').promises;
 
+// 获取截图存储目录路径
+function getScreenshotsDir() {
+  const { app } = require("electron");
+  
+  // 检查是否是开发环境
+  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+  
+  if (isDev) {
+    // 开发环境：在src目录的同级目录下
+    return path.join(process.cwd(), 'Screenshots');
+  } else {
+    // 生产环境：在exe文件所在目录的同级目录下
+    const exeDir = path.dirname(app.getPath('exe'));
+    return path.join(exeDir, 'Screenshots');
+  }
+}
+
+// 获取漫画存储目录路径
+function getMangaStoreDir() {
+  const { app } = require("electron");
+  
+  // 检查是否是开发环境
+  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+  
+  if (isDev) {
+    // 开发环境：使用相对路径
+    return path.join(__dirname, '../../mangastore');
+  } else {
+    // 生产环境：在exe文件所在目录的同级目录下
+    const exeDir = path.dirname(app.getPath('exe'));
+    return path.join(exeDir, 'mangastore');
+  }
+}
+
 // 扫描漫画结构并生成json
 async function scanMangaStructure(mangaStorePath) {
   try {
@@ -111,7 +145,7 @@ export  const  RegisterHandel =function () {
 
     ipcMain.handle("importFolders", async (event, targetPaths) => {
         if (!Array.isArray(targetPaths)) targetPaths = [targetPaths];
-        const destPath = path.join(__dirname, '../../mangastore');
+        const destPath = getMangaStoreDir();
         await fs.mkdir(destPath, { recursive: true });
         const results = [];
         let hasSuccess = false;
@@ -138,7 +172,7 @@ export  const  RegisterHandel =function () {
     });
 
     ipcMain.handle("getMangaList", async () => {
-        const destPath = path.join(__dirname, '../../mangastore');
+        const destPath = getMangaStoreDir();
         try {
             const folders = await fs.readdir(destPath, { withFileTypes: true });
             const mangaList = folders.filter(dirent => dirent.isDirectory()).map(dirent => ({
@@ -152,13 +186,99 @@ export  const  RegisterHandel =function () {
     });
 
     ipcMain.handle("getMangaStructure", async () => {
-        const jsonPath = path.join(__dirname, '../../mangastore/manga_structure.json');
+        const jsonPath = path.join(getMangaStoreDir(), 'manga_structure.json');
         try {
             const data = await fs.readFile(jsonPath, 'utf8');
             return JSON.parse(data);
         } catch (error) {
             console.error('读取漫画结构json失败：', error);
             return { mangas: [] };
+        }
+    });
+
+    ipcMain.handle("saveCroppedImage", async (event, base64Data, filename) => {
+        const { app } = require("electron");
+        try {
+            // Create Screenshots directory
+            const screenshotsDir = getScreenshotsDir();
+            await fs.mkdir(screenshotsDir, { recursive: true });
+            
+            // Remove data URL prefix and decode
+            const base64Image = base64Data.replace(/^data:image\/png;base64,/, '');
+            const imageBuffer = Buffer.from(base64Image, 'base64');
+            
+            // Save file
+            const filePath = path.join(screenshotsDir, filename);
+            await fs.writeFile(filePath, imageBuffer);
+            
+            return { success: true, filePath };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle("clearScreenshots", async () => {
+        const { app } = require("electron");
+        try {
+            const screenshotsDir = getScreenshotsDir();
+            
+            // Check if directory exists
+            try {
+                await fs.access(screenshotsDir);
+            } catch {
+                // Directory doesn't exist, nothing to clear
+                return { success: true, message: 'Screenshots directory does not exist' };
+            }
+            
+            // Read all files in the directory
+            const files = await fs.readdir(screenshotsDir);
+            
+            // Delete each file
+            for (const file of files) {
+                const filePath = path.join(screenshotsDir, file);
+                const stat = await fs.stat(filePath);
+                if (stat.isFile()) {
+                    await fs.unlink(filePath);
+                }
+            }
+            
+            return { success: true, message: `Cleared ${files.length} files from Screenshots directory` };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle("openScreenshotsFolder", async () => {
+        const { app, shell } = require("electron");
+        try {
+            const screenshotsDir = getScreenshotsDir();
+            
+            // Ensure directory exists
+            await fs.mkdir(screenshotsDir, { recursive: true });
+            
+            // Open folder in file explorer
+            await shell.openPath(screenshotsDir);
+            
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle("openMangaStoreFolder", async () => {
+        const { app, shell } = require("electron");
+        try {
+            const mangaStoreDir = getMangaStoreDir();
+            
+            // Ensure directory exists
+            await fs.mkdir(mangaStoreDir, { recursive: true });
+            
+            // Open folder in file explorer
+            await shell.openPath(mangaStoreDir);
+            
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
         }
     });
    

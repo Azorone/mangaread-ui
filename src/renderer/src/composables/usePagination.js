@@ -14,18 +14,18 @@ export function usePagination(mangaSet) {
 
   // 上一页
   const prevPage = () => {
-    if (currentPage.value > 1) {
+   
       currentPage.value--;
       mangaSet.switchPage(-1);
-    }
+    
   };
 
   // 下一页
   const nextPage = () => {
-    if (currentPage.value < totalPages.value) {
+  
       currentPage.value++;
        mangaSet.switchPage(1);
-    }
+    
   };
 
   return {

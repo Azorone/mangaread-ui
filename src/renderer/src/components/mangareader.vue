@@ -189,6 +189,59 @@ watch(currentMangaPage, (newUrl) => {
   }
 });
 
+const handlePreviewDragStart = (event, index) => {
+  const item = cropper.croppedList.value[index];
+  // Set drag data as file:// URI for external apps
+  const fileUri = `file://${item.path}`;
+  event.dataTransfer.setData('text/uri-list', fileUri);
+  event.dataTransfer.setData('text/plain', fileUri);
+  // Optional: set drag image
+  const img = event.target;
+  event.dataTransfer.setDragImage(img, img.width / 2, img.height / 2);
+};
+
+const clearScreenshots = async () => {
+  try {
+    const result = await window.api.clearScreenshots();
+    if (result.success) {
+      // Clear the croppedList in memory as well
+      cropper.croppedList.value = [];
+      alert(`截图目录已清空！${result.message}`);
+    } else {
+      alert(`清空失败：${result.error}`);
+    }
+  } catch (error) {
+    console.error('Clear screenshots error:', error);
+    alert('清空截图时发生错误');
+  }
+};
+
+const openScreenshotsFolder = async () => {
+  try {
+    const result = await window.api.openScreenshotsFolder();
+    if (!result.success) {
+      alert(`打开文件夹失败：${result.error}`);
+    }
+  } catch (error) {
+    console.error('Open screenshots folder error:', error);
+    alert('打开截图文件夹时发生错误');
+  }
+};
+
+const openMangaStoreFolder = async () => {
+  try {
+    const result = await window.api.openMangaStoreFolder();
+    if (!result.success) {
+      alert(`打开文件夹失败：${result.error}`);
+    }
+  } catch (error) {
+    console.error('Open manga store folder error:', error);
+    alert('打开漫画文件夹时发生错误');
+  }
+};
+const cleanCroppedList = () => {
+  cropper.croppedList.value.length=0// Implementation for cleaning up resources
+};
 </script>
 
 <template>
@@ -210,9 +263,13 @@ watch(currentMangaPage, (newUrl) => {
         <button @click="sidebar.toggleHistory" title="打开阅读历史">
           ⏱️ 历史记录
         </button>
-        <!-- 缓存设置按钮 -->
-        <button @click="imageCache.showCacheSettings.value = true" title="设置图片缓存">
-          ⚙️ 缓存设置
+        <!-- 打开截图文件夹按钮 -->
+        <button @click="openScreenshotsFolder" title="打开截图文件夹">
+          📁 截图文件夹
+        </button>
+        <!-- 打开漫画文件夹按钮 -->
+        <button @click="openMangaStoreFolder" title="打开漫画文件夹">
+          📂 漫画文件夹
         </button>
         <button @click="showImportPanel = true" title="导入漫画文件夹">
           📥 导入
@@ -242,6 +299,13 @@ watch(currentMangaPage, (newUrl) => {
         <!-- 保存选区（仅在裁剪模式启用时可用） -->
         <button :disabled="!cropper.isCropping.value" @click="cropper.getCroppedImage">
           💾 保存选区
+        </button>
+        <!-- 清空截图目录 -->
+         <button @click="cleanCroppedList">
+          🧹 清空预览
+         </button>
+        <button @click="clearScreenshots" title="清空所有保存的截图">
+          🗑️ 清空截图
         </button>
         <!-- 分页按钮 -->
         <button 
@@ -285,9 +349,11 @@ watch(currentMangaPage, (newUrl) => {
         <img 
           v-for="(item, index) in cropper.croppedList.value" 
           :key="index" 
-          :src="item" 
+          :src="item.base64" 
           alt="Preview" 
           @click="lightbox.openLightbox(index)"
+          @dragstart="handlePreviewDragStart($event, index)"
+          draggable="true"
         />
       </div>
     </div>
@@ -421,7 +487,9 @@ watch(currentMangaPage, (newUrl) => {
       <!-- 灯箱内容（大图 + 页码） -->
       <div class="lightbox-content">
         <!-- 当前预览的大图 -->
-        <img :src="cropper.croppedList.value[lightbox.activePreviewIndex.value]" alt="Enlarged Preview" />
+        <img :src="cropper.croppedList.value[lightbox.activePreviewIndex.value].base64" alt="Enlarged Preview"  
+          @dragstart="handlePreviewDragStart($event, lightbox.activePreviewIndex.value)"
+          draggable="true"/>
         <!-- 页码计数器 -->
         <div class="lightbox-counter">
           {{ lightbox.activePreviewIndex.value + 1 }} / {{ cropper.croppedList.value.length }}
