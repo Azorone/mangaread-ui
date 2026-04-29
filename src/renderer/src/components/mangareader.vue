@@ -7,16 +7,26 @@ import { useSidebar } from '../composables/useSidebar';
 import { useKeyboard } from '../composables/useKeyboard';
 import { useMangaSet } from '../composables/useMangaSet';
 import 'cropperjs/dist/cropper.css';
+// 导入工具栏组件
+import Toolbar from './toolbar/Toolbar.vue';
+// 导入查看器组件
+import ViewerContainer from './viewer/ViewerContainer.vue';
+import PreviewBar from './viewer/PreviewBar.vue';
+// 导入侧边栏组件
+import SidebarContainer from './sidebar/SidebarContainer.vue';
+// 导入模态框组件
+import ImportModal from './modals/ImportModal.vue';
+import Lightbox from './modals/Lightbox.vue';
 
 
 // ========================
 // 初始化 Composables
 // ========================
 const mangaSet = useMangaSet();
-const imageRef = ref(null);
+const image = ref(null);
 const pagination = usePagination(mangaSet);
 const sidebar = useSidebar(mangaSet, pagination);
-const cropper = useCropper(imageRef);
+const cropper = useCropper(image);
 const lightbox = useLightbox(cropper.croppedList);
 const keyboard = useKeyboard(pagination, cropper);
 const showImportPanel = ref(false);
@@ -149,9 +159,11 @@ const currentMangaPage = computed(() => {
 // ========================
 onMounted(async () => {
   // 初始化Cropper
-  cropper.initCropper();
+  cropper.initCropper(image.value.imageRef);
+  console.log(image.value.imageRef)
   await mangaSet.initializeMangaSet();
   await sidebar.initSidebar();
+  await pagination.initializePagination();
   // 监听视口大小变化，自动重新适配
   window.addEventListener('resize', cropper.fitToScreen);
   
@@ -164,6 +176,7 @@ onMounted(async () => {
   // 设置键盘事件监听
   keyboard.setupKeyboardListener();
 
+  cropper.toggleCrop();
 });
 
 // ========================
@@ -189,248 +202,121 @@ watch(currentMangaPage, (newUrl) => {
   }
 });
 
+const handlePreviewDragStart = (event, index) => {
+  const item = cropper.croppedList.value[index];
+  // Set drag data as file:// URI for external apps
+  const fileUri = `file://${item.path}`;
+  event.dataTransfer.setData('text/uri-list', fileUri);
+  event.dataTransfer.setData('text/plain', fileUri);
+  // Optional: set drag image
+  const img = event.target;
+  event.dataTransfer.setDragImage(img, img.width / 2, img.height / 2);
+};
+
+const clearScreenshots = async () => {
+  try {
+    const result = await window.api.clearScreenshots();
+    if (result.success) {
+      // Clear the croppedList in memory as well
+      cropper.croppedList.value = [];
+      alert(`截图目录已清空！${result.message}`);
+    } else {
+      alert(`清空失败：${result.error}`);
+    }
+  } catch (error) {
+    console.error('Clear screenshots error:', error);
+    alert('清空截图时发生错误');
+  }
+};
+
+const openScreenshotsFolder = async () => {
+  try {
+    const result = await window.api.openScreenshotsFolder();
+    if (!result.success) {
+      alert(`打开文件夹失败：${result.error}`);
+    }
+  } catch (error) {
+    console.error('Open screenshots folder error:', error);
+    alert('打开截图文件夹时发生错误');
+  }
+};
+
+const openMangaStoreFolder = async () => {
+  try {
+    const result = await window.api.openMangaStoreFolder();
+    if (!result.success) {
+      alert(`打开文件夹失败：${result.error}`);
+    }
+  } catch (error) {
+    console.error('Open manga store folder error:', error);
+    alert('打开漫画文件夹时发生错误');
+  }
+};
+
+const removeFolder = (index) => {
+  selectedFolders.value.splice(index, 1);
+};
+
+const cleanCroppedList = () => {
+  cropper.croppedList.value.length=0// Implementation for cleaning up resources
+};
 </script>
 
 <template>
   <!-- 漫画阅读器主容器 -->
   <div class="manga-app">
     <!-- ==================== 工具栏区域 ==================== -->
-    <div class="toolbar">
-      <!-- 左侧：导航和控制按钮 -->
-      <div class="group">
-        <!-- 漫画列表按钮 -->
-        <button @click="sidebar.toggleMangaList" title="打开漫画列表">
-          📚 漫画列表
-        </button>
-        <!-- 目录按钮 -->
-        <button @click="sidebar.toggleContents" title="打开目录">
-          📖 目录
-        </button>
-        <!-- 阅读历史按钮 -->
-        <button @click="sidebar.toggleHistory" title="打开阅读历史">
-          ⏱️ 历史记录
-        </button>
-        <!-- 缓存设置按钮 -->
-        <button @click="imageCache.showCacheSettings.value = true" title="设置图片缓存">
-          ⚙️ 缓存设置
-        </button>
-        <button @click="showImportPanel = true" title="导入漫画文件夹">
-          📥 导入
-        </button>
-      </div>
-
-      <!-- 中心：图片编辑工具组 -->
-      <div class="group">
-        <!-- 放大按钮 -->
-        <button @click="cropper.zoom(0.1)" title="放大 (键盘: + 键)">➕ 放大</button>
-        <!-- 缩小按钮 -->
-        <button @click="cropper.zoom(-0.1)" title="缩小 (键盘: - 键)">➖ 缩小</button>
-        <!-- 左旋转 -->
-        <button @click="cropper.rotate(-90)">↺ 左旋</button>
-        <!-- 右旋转 -->
-        <button @click="cropper.rotate(90)">↻ 右旋</button>
-        <!-- 自适应屏幕 -->
-        <button @click="cropper.fitToScreen">📺 自适应屏幕</button>
-      </div>
-
-      <!-- 右侧：裁剪和分页工具 -->
-      <div class="group">
-        <!-- 切换裁剪模式 -->
-        <button :class="{ active: cropper.isCropping.value }" @click="cropper.toggleCrop">
-          {{ cropper.isCropping.value ? '禁用裁剪' : '✂️ 自由裁剪' }}
-        </button>
-        <!-- 保存选区（仅在裁剪模式启用时可用） -->
-        <button :disabled="!cropper.isCropping.value" @click="cropper.getCroppedImage">
-          💾 保存选区
-        </button>
-        <!-- 分页按钮 -->
-        <button 
-          @click="pagination.prevPage" 
-          :disabled="pagination.currentPage.value === 1" 
-          title="前一页 (键盘: ← 左箭头)"
-        >
-          ⬅️ 前一页
-        </button>
-        <!-- 页码显示 -->
-        <span class="page-indicator">{{ pagination.currentPage.value }} / {{ pagination.totalPages.value }}</span>
-        <!-- 下一页按钮 -->
-        <button 
-          @click="pagination.nextPage" 
-          :disabled="pagination.currentPage.value === pagination.totalPages.value" 
-          title="下一页 (键盘: → 右箭头)"
-        >
-          下一页 ➡️
-        </button>
-      </div>
-    </div>
+    <Toolbar 
+      :sidebar="sidebar"
+      :cropper="cropper"
+      :pagination="pagination"
+      :openScreenshotsFolder="openScreenshotsFolder"
+      :openMangaStoreFolder="openMangaStoreFolder"
+      @showImportPanel="showImportPanel = true"
+      @cleanCroppedList="cleanCroppedList"
+      @clearScreenshots="clearScreenshots"
+    />
 
     <!-- ==================== 主图片查看区域 ==================== -->
-    <!-- @contextmenu.prevent: 禁用默认右键菜单，自定义右键行为 -->
-    <div class="viewer-container" @contextmenu.prevent="cropper.handleRightClick">
-      <!-- 图片包装层 -->
-      <div class="img-wrapper">
-        <!-- 漫画当前页图片（ref绑定用于Cropper初始化） -->
-        <img ref="imageRef" :src="currentMangaPage" alt="Manga Page" />
-      </div>
-    </div>
+    <ViewerContainer 
+      ref="image"
+      :currentMangaPage="currentMangaPage"
+      :cropper="cropper"
+    />
 
     <!-- ==================== 预览条区域 ==================== -->
-    <!-- v-if: 仅当有裁剪图片时显示 -->
-    <div v-if="cropper.croppedList.value.length > 0" class="preview-bar">
-      <!-- 预览信息文本 -->
-      <span>裁剪预览({{ cropper.croppedList.value.length }}) - 点击图片可放大：</span>
-      <!-- 预览图片列表 -->
-      <div class="preview-list">
-        <!-- 循环渲染所有裁剪的图片缩略图，点击打开灯箱 -->
-        <img 
-          v-for="(item, index) in cropper.croppedList.value" 
-          :key="index" 
-          :src="item" 
-          alt="Preview" 
-          @click="lightbox.openLightbox(index)"
-        />
-      </div>
-    </div>
+    <PreviewBar 
+      :cropper="cropper"
+      :lightbox="lightbox"
+    />
 
-    <!-- ==================== 目录侧边栏 ==================== -->
-    <!-- 目录面板（从左侧滑出） -->
-    <div v-if="sidebar.showContents.value" class="sidebar contents-sidebar">
-      <!-- 目录头部 -->
-      <div class="sidebar-header">
-        <h3>📖 目录</h3>
-        <button class="close-sidebar-btn" @click="sidebar.toggleContents">✕</button>
-      </div>
-      <!-- 目录内容列表 -->
-      <div class="sidebar-content">
-        <ul class="contents-list">
-          <li 
-            v-for="(content, index) in sidebar.chapterList.value" 
-            :key="index"
-            class="contents-item"
-            @click="sidebar.selectContent(content)"
-          >
-            {{ content }}
-          </li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- ==================== 漫画列表侧边栏 ==================== -->
-    <!-- 漫画列表面板（从左侧滑出） -->
-    <div v-if="sidebar.showMangaList.value" class="sidebar manga-list-sidebar">
-      <!-- 漫画列表头部 -->
-      <div class="sidebar-header">
-        <h3>📚 漫画列表</h3>
-        <button class="close-sidebar-btn" @click="sidebar.toggleMangaList">✕</button>
-      </div>
-      <!-- 漫画列表内容 -->
-      <div class="sidebar-content">
-        <ul class="manga-list">
-          <li 
-            v-for="manga in sidebar.mangaList.value" 
-            :key="manga.id"
-            class="manga-item"
-         
-            @click="sidebar.selectManga(manga)"
-          >
-            <div class="manga-title">{{ manga }}</div>
-          </li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- ==================== 阅读历史侧边栏 ==================== -->
-    <!-- 历史记录面板（从左侧滑出） -->
-    <div v-if="sidebar.showHistory.value" class="sidebar history-sidebar">
-      <!-- 历史记录头部 -->
-      <div class="sidebar-header">
-        <h3>⏱️ 阅读历史</h3>
-        <button class="close-sidebar-btn" @click="sidebar.toggleHistory">✕</button>
-      </div>
-      <!-- 历史记录内容 -->
-      <div class="sidebar-content">
-        <div v-if="sidebar.historyList.value.length > 0" class="history-list">
-          <div 
-            v-for="(item, i) in sidebar.historyList.value" 
-            :key="i"
-            class="history-item"
-            @click="sidebar.selectHistory(item)"
-          >
-            <div class="history-title">{{ item.mangaTitle }}</div>
-            <div class="history-meta">第{{ item.page }}页</div>
-            <div class="history-time">{{ item.timestamp }}</div>
-          </div>
-        </div>
-        <div v-else class="empty-message">暂无阅读历史</div>
-      </div>
-      <!-- 清空历史按钮 -->
-      <div v-if="sidebar.historyList.value.length > 0" class="sidebar-footer">
-        <button class="clear-btn" @click="sidebar.clearHistory">🗑️ 清空历史</button>
-      </div>
-    </div>
-
-    <!-- ==================== 灯箱遮罩（防止点击侧边栏外）==================== -->
-    <!-- 当侧边栏打开时，点击遮罩关闭侧边栏 -->
-    <div 
-      v-if="sidebar.showContents.value || sidebar.showMangaList.value || sidebar.showHistory.value" 
-      class="sidebar-overlay"
-      @click="sidebar.showContents.value = false; sidebar.showMangaList.value = false; sidebar.showHistory.value = false"
-    ></div>
-
-  
-
-    <div v-if="showImportPanel" class="import-modal">
-      <div class="import-overlay" @click="showImportPanel = false"></div>
-      <div
-        class="import-panel"
-        @dragenter="handleDragEnter"
-        @dragover="preventDefault"
-        @dragleave="handleDragLeave"
-        @drop="handleDrop"
-      >
-        <div :class="['import-drop-area', { 'drag-over': importDropActive.value }]">
-          <div v-if="selectedFolders.length === 0">
-            <div class="import-icon" @click="openImportDialog">📁</div>
-            <div class="import-text">点击选择文件夹或直接将文件夹拖入此处</div>
-          </div>
-          <div v-else class="import-list">
-            <div class="import-item" v-for="(folder, index) in selectedFolders" :key="index">
-              <span class="folder-path">{{ folder }}</span>
-              <button class="btn-import" @click="importFolder(folder)">导入</button>
-              <button class="btn-remove" @click="removeFolder(index)">取消</button>
-            </div>
-          </div>
-        </div>
-        <div class="import-footer">
-          <button class="btn-primary" @click="batchImport" :disabled="selectedFolders.length === 0">批量导入</button>
-          <button class="btn-secondary" @click="showImportPanel = false">关闭</button>
-        </div>
-      </div>
-    </div>
+    <!-- ==================== 侧边栏系统 ==================== -->
+    <SidebarContainer 
+      :sidebar="sidebar"
+    />
 
     <!-- ==================== 灯箱（全屏预览）区域 ==================== -->
-    <!-- v-if: 仅当灯箱打开时显示 -->
-    <!-- @click.self: 点击黑色背景关闭灯箱（不会误触内容） -->
-    <div v-if="lightbox.showLightbox.value" class="lightbox-overlay" @click.self="lightbox.closeLightbox">
-      <!-- 关闭按钮 -->
-      <button class="close-btn" @click="lightbox.closeLightbox">✕</button>
+    <Lightbox 
+      :lightbox="lightbox"
+      :cropper="cropper"
       
-      <!-- 上一张按钮 -->
-      <button class="nav-btn prev-btn" @click="lightbox.prevPreview">❮</button>
-      
-      <!-- 灯箱内容（大图 + 页码） -->
-      <div class="lightbox-content">
-        <!-- 当前预览的大图 -->
-        <img :src="cropper.croppedList.value[lightbox.activePreviewIndex.value]" alt="Enlarged Preview" />
-        <!-- 页码计数器 -->
-        <div class="lightbox-counter">
-          {{ lightbox.activePreviewIndex.value + 1 }} / {{ cropper.croppedList.value.length }}
-        </div>
-      </div>
-      
-      <!-- 下一张按钮 -->
-      <button class="nav-btn next-btn" @click="lightbox.nextPreview">❯</button>
-    </div>
+    />
+
+    <!-- ==================== 导入面板 ==================== -->
+    <ImportModal 
+      :showImportPanel="showImportPanel"
+      :importDropActive="importDropActive"
+      :selectedFolders="selectedFolders"
+      @update:showImportPanel="(v) => showImportPanel = v"
+      @preventDefault="preventDefault"
+      @handleDragEnter="handleDragEnter"
+      @handleDragLeave="handleDragLeave"
+      @handleDrop="handleDrop"
+      @openImportDialog="openImportDialog"
+      @importFolder="importFolder"
+      @removeFolder="removeFolder"
+      @batchImport="batchImport"
+    />
   </div>
 </template>
 

@@ -66,6 +66,7 @@ export function useSidebar(mangaSet, pagination) {
    console.log(`选择漫画 ${manga}，加载章节列表`);
    mangaSet.switchComic(manga);
    initSidebar();
+   pagination.initializePagination();
   };
  const refreshMangaList = async () => {
    await mangaSet.initializeMangaSet();

@@ -47,6 +47,26 @@ const api = {
     console.log('Get manga structure result:', result)
     return result
   },
+  saveCroppedImage: async (base64Data, filename) => {
+    const result = await ipcRenderer.invoke('saveCroppedImage', base64Data, filename)
+    console.log('Save cropped image result:', result)
+    return result
+  },
+  clearScreenshots: async () => {
+    const result = await ipcRenderer.invoke('clearScreenshots')
+    console.log('Clear screenshots result:', result)
+    return result
+  },
+  openScreenshotsFolder: async () => {
+    const result = await ipcRenderer.invoke('openScreenshotsFolder')
+    console.log('Open screenshots folder result:', result)
+    return result
+  },
+  openMangaStoreFolder: async () => {
+    const result = await ipcRenderer.invoke('openMangaStoreFolder')
+    console.log('Open manga store folder result:', result)
+    return result
+  },
   getPathForFile: async (file) =>{ const s = webUtils.getPathForFile(file)
     console.log('获取文件路径：', s);
     return s

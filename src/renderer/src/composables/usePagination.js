@@ -7,33 +7,42 @@ import { ref} from 'vue';
 export function usePagination(mangaSet) {
   const currentPage = ref(1);
   const totalPages = ref(100);
-  const loadPageFromCache = async () => {
-    // 对于本地文件，直接返回，无需缓存
-    return null;
-  };
+
+  const initializePagination = async () => {
+    console.log('正在初始化分页数据...');
+    // 这里可以根据漫画结构数据设置总页数
+    totalPages.value = mangaSet.mangaSet.value[mangaSet.MangaIndex.value].chapters[mangaSet.ChapterIndex.value].images.length;
+    let totalImages = 0;
+    for(let i =0; i < mangaSet.mangaSet.value[mangaSet.MangaIndex.value].chapters.length; i++){
+      totalImages += mangaSet.mangaSet.value[mangaSet.MangaIndex.value].chapters[i].images.length;
+    }
+    totalPages.value = totalImages;
+    console.log(`总页数设置为 ${totalPages.value}`);
+  
+  }
 
   // 上一页
   const prevPage = () => {
-    if (currentPage.value > 1) {
+   
       currentPage.value--;
       mangaSet.switchPage(-1);
-    }
+    
   };
 
   // 下一页
   const nextPage = () => {
-    if (currentPage.value < totalPages.value) {
+  
       currentPage.value++;
        mangaSet.switchPage(1);
-    }
+    
   };
 
   return {
     currentPage,
     totalPages,
     // 方法
-    loadPageFromCache,
     prevPage,
-    nextPage
+    nextPage,
+    initializePagination
   };
 }
