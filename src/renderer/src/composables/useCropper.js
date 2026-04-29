@@ -5,20 +5,20 @@ import Cropper from 'cropperjs'
  * 图片裁剪管理composable
  * 负责Cropper初始化、图片编辑操作
  */
-export function useCropper(imageRef) {
+export function useCropper(imag) {
   const cropper = ref(null)
-  const isCropping = ref(false)
+  const isCropping = ref(true)
   const croppedList = ref([])
 
   // ========================
   // 初始化Cropper
   // ========================
-  const initCropper = () => {
+  const initCropper = (imageRef) => {
     // 确保图片DOM节点已存在
-    if (!imageRef.value) return
-
+    if (!imageRef) return
+      console.log('正在初始化Cropper，图片节点已就绪')
     // 初始化Cropper实例，配置裁剪参数
-    cropper.value = new Cropper(imageRef.value, {
+    cropper.value = new Cropper(imageRef, {
       viewMode: 0, // 0: 自由放大/缩小，图片能充分利用容器空间
       autoCrop: false, // 禁用自动裁剪，需手动启用
       movable: true, // 支持移动图片
@@ -26,15 +26,18 @@ export function useCropper(imageRef) {
       scalable: false, // 禁用缩放选区
       rotatable: true, // 支持旋转图片
       background: false, // 禁用背景
-      checkCrossOrigin: false, // 禁用跨域检查，支持自定义协议
-      
+      checkCrossOrigin: false, // 禁用跨域检查，支持自定义协议，
+      dragMode: 'none', // 初始禁用拖动模式，需手动启用裁剪模式
+       // 初始状态禁用交互，需手动启用
       ready() {
         // Cropper初始化完成时的回调
         console.log('漫画图片加载完成，裁剪器就绪')
         // 自动适配屏幕大小
-       fitToScreen()
+        // 初始禁用交互，需手动启用裁剪模式
       }
+      
     })
+      
   }
 
   // ========================
@@ -94,7 +97,7 @@ export function useCropper(imageRef) {
   // ========================
   const handleRightClick = () => {
     // 仅在裁剪模式启用且Cropper存在时响应
-    if (!isCropping.value || !cropper.value) return
+    if (!isCropping.value ) return
 
     // 获取当前选区数据
     const cropData = cropper.value.getData()
@@ -111,26 +114,38 @@ export function useCropper(imageRef) {
   // ========================
   // 切换裁剪模式
   // ========================
+
   const toggleCrop = () => {
     // 确保Cropper实例存在
-    if (!cropper.value) return
     // 切换裁剪模式状态
-    isCropping.value = !isCropping.value
-
+     isCropping.value = !isCropping.value
     if (isCropping.value) {
       // 启用裁剪模式，显示选区框
      // cropper.value.crop()
+     console.log('裁剪模式已启用')
+     cropper.value.setDragMode('crop');
+
+      
     } else {
       // 禁用裁剪模式，清除选区框
       //cropper.value.clear()
+      console.log('裁剪模式已禁用')
+      cropper.value.setDragMode('none');
+    
+// 重新开启交互
+    
     }
+       
   }
 
   // ========================
   // 图片缩放和旋转
   // ========================
   // 缩放图片 (value正值放大，负值缩小)
-  const zoom = (value) => cropper.value?.zoom(value)
+  const zoom = (value) => {
+    console.log(`缩放图片，值: ${value}`)
+    cropper.value?.zoom(value)
+  }
   // 旋转图片 (度数，正值顺时针)
   const rotate = (deg) => cropper.value?.rotate(deg)
   // 移动图片 (offsetX: 水平位移，正值向右，负值向左)
@@ -196,6 +211,12 @@ export function useCropper(imageRef) {
       cropper.value = null
     }
   }
+  const openCropper = () => {
+      if (!cropper.value) {
+        console.warn('Cropper实例不存在，无法打开裁剪器')
+        return
+      }
+  }
 
   return {
     cropper,
@@ -210,6 +231,7 @@ export function useCropper(imageRef) {
     rotate,
     move,
     getCroppedImage,
-    destroyCropper
+    destroyCropper,
+    openCropper
   }
 }

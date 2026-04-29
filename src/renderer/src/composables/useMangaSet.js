@@ -55,13 +55,17 @@ console.log(mangaSet.value);
       }
       return index;
   };
+
+
   const switchComic = (mangaName)=>{
      let index =  findMangaIndex(mangaName);
      MangaIndex.value = index; 
      ChapterIndex.value = 0;
      PageIndex.value = 0;
      console.log(`切换漫画到 ${mangaName}，索引: ${index}`);
+     
   };
+  
 
   const switchChapter = (chapterName)=>{
 
