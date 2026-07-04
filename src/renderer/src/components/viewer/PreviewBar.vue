@@ -9,12 +9,12 @@ const props = defineProps({
 defineEmits(['handlePreviewDragStart'])
 
 const handlePreviewDragStart = (event, index) => {
-  const item = props.cropper.croppedList.value[index];
-  const fileUri = `file://${item.path}`;
-  event.dataTransfer.setData('text/uri-list', fileUri);
-  event.dataTransfer.setData('text/plain', fileUri);
-  const img = event.target;
-  event.dataTransfer.setDragImage(img, img.width / 2, img.height / 2);
+  const item = props.cropper.croppedList.value[index]
+  const fileUri = `file://${item.path}`
+  event.dataTransfer.setData('text/uri-list', fileUri)
+  event.dataTransfer.setData('text/plain', fileUri)
+  const img = event.target
+  event.dataTransfer.setDragImage(img, img.width / 2, img.height / 2)
 }
 </script>
 
@@ -22,14 +22,14 @@ const handlePreviewDragStart = (event, index) => {
   <div v-if="cropper.croppedList.value.length > 0" class="preview-bar">
     <span>裁剪预览({{ cropper.croppedList.value.length }}) - 点击图片可放大：</span>
     <div class="preview-list">
-      <img 
-        v-for="(item, index) in cropper.croppedList.value" 
-        :key="index" 
-        :src="item.base64" 
-        alt="Preview" 
+      <img
+        v-for="(item, index) in cropper.croppedList.value"
+        :key="index"
+        :src="item.base64"
+        alt="Preview"
+        draggable="true"
         @click="lightbox.openLightbox(index)"
         @dragstart="handlePreviewDragStart($event, index)"
-        draggable="true"
       />
     </div>
   </div>
@@ -42,15 +42,15 @@ const handlePreviewDragStart = (event, index) => {
   align-items: center;
   gap: 1rem;
   padding: 0.75rem;
-  background-color: #2a2a2a;
-  border-top: 1px solid #444;
+  background-color: var(--bg-panel);
+  border-top: 1px solid var(--border-color);
   overflow-x: auto;
 }
 
 /* 预览条文本样式 */
 .preview-bar span {
   font-size: 0.9rem;
-  color: #fff;
+  color: var(--text-primary);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -68,16 +68,18 @@ const handlePreviewDragStart = (event, index) => {
   height: 80px;
   width: auto;
   object-fit: contain;
-  border: 2px solid #444;
+  border: 2px solid var(--border-color);
   border-radius: 4px;
   cursor: pointer;
-  transition: border-color 0.2s, transform 0.2s;
+  transition:
+    border-color 0.2s,
+    transform 0.2s;
   flex-shrink: 0;
 }
 
 /* 缩略图悬停效果 */
 .preview-list img:hover {
-  border-color: #0e639c;
+  border-color: var(--highlight-blue);
   transform: scale(1.05);
 }
 </style>

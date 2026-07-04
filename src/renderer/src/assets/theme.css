@@ -1,0 +1,164 @@
+/* ===================================================================
+   theme.css — 漫画阅读器主题系统
+   ===================================================================
+   本文件定义所有设计令牌（Design Tokens）为 CSS 自定义属性，
+   后续主题只需覆写对应变量即可切换整套外观。
+   所有组件应优先使用此处的变量，避免硬编码色值。
+   =================================================================== */
+
+/* ==================== 全局重置 ====================
+   禁止外层滚动，只保留组件内部滚动（如长图查看区） */
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
+#app {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ==================== 滚动条主题 ====================
+   修改此处可全局更换滚动条颜色 */
+:root {
+  --scrollbar-width: 8px;
+  --scrollbar-track-bg: #1a1a1a;
+  --scrollbar-thumb-bg: #cc3333; /* ← 红色滑块 */
+  --scrollbar-thumb-hover-bg: #ff4444; /* ← 亮红色悬停 */
+  --scrollbar-thumb-radius: 4px;
+}
+
+/* ==================== 颜色主题 ====================
+   修改此处可全局更换配色方案 */
+:root {
+  /* 背景色系 */
+  --bg-app: #1a1a1a; /* 最深层背景（查看器、应用根） */
+  --bg-panel: #2a2a2a; /* 面板背景（侧边栏、预览条） */
+  --bg-elevated: #333333; /* 抬高层背景（输入框、悬停项） */
+  --bg-overlay: rgba(0, 0, 0, 0.5); /* 遮罩层 */
+
+  /* 文字色系 */
+  --text-primary: #e0e0e0;
+  --text-secondary: #cccccc;
+  --text-muted: #999999;
+  --text-dim: #666666;
+
+  /* 边框色系 */
+  --border-color: #444444;
+  --border-light: #555555;
+  --border-focus: #409eff;
+
+  /* 主题色（Element Plus 配合色） */
+  --color-primary: #409eff;
+  --color-primary-hover: #66b1ff;
+  --color-primary-active: #337ecc;
+  --color-danger: #f56c6c;
+  --color-success: #67c23a;
+
+  /* 按钮色系 */
+  --btn-bg: #484b4d;
+  --btn-bg-hover: #1177bb;
+  --btn-bg-active: #0d5a8f;
+  --btn-bg-primary: #409eff;
+  --btn-text: #ffffff;
+  --btn-disabled-bg: #666666;
+  --btn-disabled-text: #999999;
+
+  /* 高亮色系 */
+  --highlight-blue: #0e639c;
+  --highlight-green: #118c45;
+}
+
+/* ==================== 布局主题 ==================== */
+:root {
+  --sidebar-width: 300px;
+  --toolbar-height: auto;
+  --previewbar-height: auto;
+}
+
+/* ==================== 圆角主题 ==================== */
+:root {
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+}
+
+/* ==================== 动画主题 ==================== */
+:root {
+  --transition-fast: 0.15s;
+  --transition-normal: 0.2s;
+  --transition-slow: 0.3s;
+}
+
+/* ==================== 亮色主题 ====================
+   在 <html> 上设置 data-theme="light" 激活 */
+[data-theme="light"] {
+  /* 滚动条（亮色） */
+  --scrollbar-track-bg: #f0f0f0;
+  --scrollbar-thumb-bg: #cc3333;
+  --scrollbar-thumb-hover-bg: #ff4444;
+
+  /* 背景色系 */
+  --bg-app: #f5f5f5;
+  --bg-panel: #ffffff;
+  --bg-elevated: #e8e8e8;
+  --bg-overlay: rgba(0, 0, 0, 0.2);
+
+  /* 文字色系（黑色字） */
+  --text-primary: #1a1a1a;
+  --text-secondary: #333333;
+  --text-muted: #666666;
+  --text-dim: #999999;
+
+  /* 边框色系 */
+  --border-color: #d0d0d0;
+  --border-light: #e0e0e0;
+  --border-focus: #409eff;
+
+  /* 按钮色系 */
+  --btn-bg: #e0e0e0;
+  --btn-bg-hover: #409eff;
+  --btn-bg-active: #337ecc;
+  --btn-bg-primary: #409eff;
+  --btn-text: #1a1a1a;
+  --btn-disabled-bg: #cccccc;
+  --btn-disabled-text: #888888;
+
+  /* 高亮色系 */
+  --highlight-blue: #409eff;
+  --highlight-green: #67c23a;
+
+  /* Element Plus 亮色覆写 */
+  --el-bg-color: #ffffff;
+  --el-bg-color-overlay: #f5f5f5;
+  --el-text-color-primary: #1a1a1a;
+  --el-text-color-regular: #333333;
+  --el-border-color: #d0d0d0;
+  --el-border-color-darker: #bbbbbb;
+  --el-fill-color: #f0f0f0;
+  --el-fill-color-blank: #ffffff;
+  --el-fill-color-light: #e8e8e8;
+  --el-color-primary: #409eff;
+  --el-color-primary-light-3: #66b1ff;
+  --el-color-primary-dark-2: #337ecc;
+  --el-mask-color: rgba(0, 0, 0, 0.3);
+}
+
+/* ==================== 后续拓展指南 ====================
+   【添加新主题】在 [data-theme="xxx"] 选择器中覆写变量：
+
+   [data-theme="sepia"] {
+     --bg-app: #fbf3e0;
+     --text-primary: #5b4636;
+     ...
+   }
+
+   【新增变量】如果组件需要新颜色，先在 :root 中定义默认值：
+   --component-specific-color: #xxx;
+   然后在组件中通过 var(--component-specific-color) 引用。
+
+   【全局 CSS 变量 vs Scoped】组件特有的样式仍用 scoped，
+   但所有颜色/尺寸/动画优先使用本文件定义的变量。
+   =================================================================== */

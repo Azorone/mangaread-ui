@@ -1,81 +1,62 @@
-import { contextBridge, ipcRenderer,webUtils } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
-// Custom APIs for renderer
 const api = {
-  ping: async () => {
-    const response = await ipcRenderer.invoke('ping')
-    console.log(response) // Should print "pong"
-  },
-  getAppVersion: async () => {
-    const version = await ipcRenderer.invoke('getAppVersion')
-    console.log('App Version:', version)
-    return version
-  },
-  getAppPath: async () => {
-    const appPath = await ipcRenderer.invoke('getAppPath')
-    console.log('App Path:', appPath)
-    return appPath
-  },
-  getUserDataPath: async () => {
-    const userDataPath = await ipcRenderer.invoke('getUserDataPath')
-    console.log('User Data Path:', userDataPath)
-    return userDataPath
-  },
-  openFolderDialog: async () => {
-    const result = await ipcRenderer.invoke('openFolderDialog')
-    console.log('Open folder dialog result:', result)
-    return result
-  },
-  importFolders: async (folders) => {
-    const result = await ipcRenderer.invoke('importFolders', folders)
-    console.log('Import folders result:', result)
-    return result
-  },
-  getMangaList: async () => {
-    const result = await ipcRenderer.invoke('getMangaList')
-    console.log('Get manga list result:', result)
-    return result
-  },
-  getMangaImages: async (mangaId) => {
-    const result = await ipcRenderer.invoke('getMangaImages', mangaId)
-    console.log('Get manga images result:', result)
-    return result
-  },
-  getMangaStructure: async () => {
-    const result = await ipcRenderer.invoke('getMangaStructure')
-    console.log('Get manga structure result:', result)
-    return result
-  },
-  saveCroppedImage: async (base64Data, filename) => {
-    const result = await ipcRenderer.invoke('saveCroppedImage', base64Data, filename)
-    console.log('Save cropped image result:', result)
-    return result
-  },
-  clearScreenshots: async () => {
-    const result = await ipcRenderer.invoke('clearScreenshots')
-    console.log('Clear screenshots result:', result)
-    return result
-  },
-  openScreenshotsFolder: async () => {
-    const result = await ipcRenderer.invoke('openScreenshotsFolder')
-    console.log('Open screenshots folder result:', result)
-    return result
-  },
-  openMangaStoreFolder: async () => {
-    const result = await ipcRenderer.invoke('openMangaStoreFolder')
-    console.log('Open manga store folder result:', result)
-    return result
-  },
-  getPathForFile: async (file) =>{ const s = webUtils.getPathForFile(file)
-    console.log('获取文件路径：', s);
-    return s
+  getAppVersion: async () => await ipcRenderer.invoke('getAppVersion'),
+
+  openFolderDialog: async () => await ipcRenderer.invoke('openFolderDialog'),
+
+  importFolders: async (folders) => await ipcRenderer.invoke('manga:import', folders),
+
+  getMangaStructure: async () => await ipcRenderer.invoke('getMangaStructure'),
+
+  // Screenshot (preserve existing functionality)
+  saveCroppedImage: async (base64Data, filename) =>
+    await ipcRenderer.invoke('saveCroppedImage', base64Data, filename),
+  clearScreenshots: async () => await ipcRenderer.invoke('clearScreenshots'),
+  openScreenshotsFolder: async () => await ipcRenderer.invoke('openScreenshotsFolder'),
+  openMangaStoreFolder: async () => await ipcRenderer.invoke('openMangaStoreFolder'),
+
+  getPathForFile: async (file) => webUtils.getPathForFile(file),
+
+  // History
+  getHistory: async () => await ipcRenderer.invoke('getHistory'),
+  updateHistory: async (entry) => await ipcRenderer.invoke('history:update', entry),
+  saveHistory: async (historyList) => await ipcRenderer.invoke('saveHistory', historyList),
+
+  // 数据版本号（窗口同步用）
+  getDataVersion: async () => await ipcRenderer.invoke('getDataVersion'),
+
+  // 管理窗口
+  openManagerWindow: async () => await ipcRenderer.invoke('manager:open'),
+
+  // 文件选择器（管理窗口用）
+  openImageFileDialog: async () => await ipcRenderer.invoke('image:openDialog'),
+
+  // Manga CRUD
+  mangaStore: {
+    addChapter: async (mangaName, chapterName) =>
+      await ipcRenderer.invoke('manga:addChapter', mangaName, chapterName),
+    addChapterFromDir: async (mangaName, sourceDir) =>
+      await ipcRenderer.invoke('manga:addChapterFromDir', mangaName, sourceDir),
+    addPages: async (mangaName, chapterName, sourceFiles) =>
+      await ipcRenderer.invoke('manga:addPages', mangaName, chapterName, sourceFiles),
+    deletePage: async (mangaName, chapterName, pageName) =>
+      await ipcRenderer.invoke('manga:deletePage', mangaName, chapterName, pageName),
+    renameManga: async (oldName, newName) =>
+      await ipcRenderer.invoke('manga:renameManga', oldName, newName),
+    renameChapter: async (mangaName, oldName, newName) =>
+      await ipcRenderer.invoke('manga:renameChapter', mangaName, oldName, newName),
+    renamePage: async (mangaName, chapterName, oldName, newName) =>
+      await ipcRenderer.invoke('manga:renamePage', mangaName, chapterName, oldName, newName),
+    deleteManga: async (mangaName) => await ipcRenderer.invoke('manga:delete', mangaName),
+    deleteChapter: async (mangaName, chapterName) =>
+      await ipcRenderer.invoke('manga:deleteChapter', mangaName, chapterName),
+    exportManga: async (mangaName) => await ipcRenderer.invoke('manga:export', mangaName),
+    getAllDetail: async () => await ipcRenderer.invoke('manga:getAllDetail')
   }
 }
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)

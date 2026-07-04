@@ -3,14 +3,38 @@ import { defineConfig } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
-  main: {},
-  preload: {},
+  main: {
+    build: {
+      minify: true,
+      rollupOptions: {
+        output: {
+          manualChunks: {}
+        }
+      }
+    }
+  },
+  preload: {
+    build: {
+      minify: true
+    }
+  },
   renderer: {
     resolve: {
       alias: {
         '@renderer': resolve('src/renderer/src')
       }
     },
-    plugins: [vue()]
+    plugins: [vue()],
+    build: {
+      minify: true,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'element-plus': ['element-plus'],
+            cropperjs: ['cropperjs']
+          }
+        }
+      }
+    }
   }
 })

@@ -5,7 +5,7 @@ import Cropper from 'cropperjs'
  * 图片裁剪管理composable
  * 负责Cropper初始化、图片编辑操作
  */
-export function useCropper(imag) {
+export function useCropper() {
   const cropper = ref(null)
   const isCropping = ref(true)
   const croppedList = ref([])
@@ -16,9 +16,11 @@ export function useCropper(imag) {
   const initCropper = (imageRef) => {
     // 确保图片DOM节点已存在
     if (!imageRef) return
-      console.log('正在初始化Cropper，图片节点已就绪')
-    // 初始化Cropper实例，配置裁剪参数
-    cropper.value = new Cropper(imageRef, {
+
+    // 使用闭包变量捕获 cropper 实例，避免 ready() 中 this 绑定问题
+    let instance
+
+    const options = {
       viewMode: 0, // 0: 自由放大/缩小，图片能充分利用容器空间
       autoCrop: false, // 禁用自动裁剪，需手动启用
       movable: true, // 支持移动图片
@@ -28,16 +30,31 @@ export function useCropper(imag) {
       background: false, // 禁用背景
       checkCrossOrigin: false, // 禁用跨域检查，支持自定义协议，
       dragMode: 'none', // 初始禁用拖动模式，需手动启用裁剪模式
-       // 初始状态禁用交互，需手动启用
       ready() {
-        // Cropper初始化完成时的回调
-        console.log('漫画图片加载完成，裁剪器就绪')
-        // 自动适配屏幕大小
-        // 初始禁用交互，需手动启用裁剪模式
+        // 延迟执行自适应，等待容器布局稳定
+        setTimeout(() => {
+          try {
+            if (!instance) return
+            const containerData = instance.getContainerData()
+            const imageData = instance.getImageData()
+            if (
+              containerData &&
+              imageData &&
+              containerData.width > 50 &&
+              imageData.naturalWidth > 0
+            ) {
+              // 使用闭包捕获的 fitToScreen 函数
+              fitToScreen()
+            }
+          } catch (e) {
+            console.warn('首次自适应跳过:', e.message)
+          }
+        }, 300)
       }
-      
-    })
-      
+    }
+
+    instance = new Cropper(imageRef, options)
+    cropper.value = instance
   }
 
   // ========================
@@ -65,12 +82,10 @@ export function useCropper(imag) {
         setTimeout(fitToScreen, 200)
         return
       }
-      if (imageData.naturalHeight/imageData.naturalWidth > 1.5) {
-        let  r = containerData.width / imageData.naturalWidth;
-        cropper.value.zoomTo(r);
-       cropper.value.moveTo(
-       0,0
-      )
+      if (imageData.naturalHeight / imageData.naturalWidth > 1.5) {
+        let r = containerData.width / imageData.naturalWidth
+        cropper.value.zoomTo(r)
+        cropper.value.moveTo(0, 0)
         return
       }
       // 计算缩放比例（取宽高较小值，确保图片完全显示）
@@ -97,7 +112,7 @@ export function useCropper(imag) {
   // ========================
   const handleRightClick = () => {
     // 仅在裁剪模式启用且Cropper存在时响应
-    if (!isCropping.value ) return
+    if (!isCropping.value) return
 
     // 获取当前选区数据
     const cropData = cropper.value.getData()
@@ -118,24 +133,20 @@ export function useCropper(imag) {
   const toggleCrop = () => {
     // 确保Cropper实例存在
     // 切换裁剪模式状态
-     isCropping.value = !isCropping.value
+    isCropping.value = !isCropping.value
     if (isCropping.value) {
       // 启用裁剪模式，显示选区框
-     // cropper.value.crop()
-     console.log('裁剪模式已启用')
-     cropper.value.setDragMode('crop');
-
-      
+      // cropper.value.crop()
+      console.log('裁剪模式已启用')
+      cropper.value.setDragMode('crop')
     } else {
       // 禁用裁剪模式，清除选区框
       //cropper.value.clear()
       console.log('裁剪模式已禁用')
-      cropper.value.setDragMode('none');
-    
-// 重新开启交互
-    
+      cropper.value.setDragMode('none')
+
+      // 重新开启交互
     }
-       
   }
 
   // ========================
@@ -157,13 +168,16 @@ export function useCropper(imag) {
   const getCroppedImage = async () => {
     // 确保Cropper实例存在
     if (!cropper.value) return
-
+    var cropData = cropper.value.getData(true)
     try {
       // 获取裁剪后的Canvas画布对象
       // maxWidth/maxHeight: 限制导出图片的最大尺寸
       const canvas = cropper.value.getCroppedCanvas({
-        maxWidth: 2048,
-        maxHeight: 2048
+        width: cropData.width,
+        height: cropData.height,
+        imageSmoothingEnabled: true, // 启用图像平滑
+        imageSmoothingQuality: 'high'
+        // 使用高质量的图像平滑算法
       })
 
       // 检查canvas是否有效
@@ -182,22 +196,22 @@ export function useCropper(imag) {
       }
 
       // 生成唯一文件名
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `cropped-${timestamp}.png`;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+      const filename = `cropped-${timestamp}.png`
 
       // 保存图片到Screenshots目录
       try {
-        const saveResult = await window.api.saveCroppedImage(base64, filename);
+        const saveResult = await window.api.saveCroppedImage(base64, filename)
         if (saveResult.success) {
-          console.log('Image saved to:', saveResult.filePath);
+          console.log('Image saved to:', saveResult.filePath)
           // 将新裁剪的图片添加到列表开头（最新的在前）
-          croppedList.value.unshift({ path: saveResult.filePath, base64 });
-          console.log('图片已保存，当前列表数:', croppedList.value.length);
+          croppedList.value.unshift({ path: saveResult.filePath, base64 })
+          console.log('图片已保存，当前列表数:', croppedList.value.length)
         } else {
-          console.error('Save failed:', saveResult.error);
+          console.error('Save failed:', saveResult.error)
         }
       } catch (error) {
-        console.error('Save error:', error);
+        console.error('Save error:', error)
       }
     } catch (error) {
       console.error('获取裁剪图片时出错：', error)
@@ -212,10 +226,10 @@ export function useCropper(imag) {
     }
   }
   const openCropper = () => {
-      if (!cropper.value) {
-        console.warn('Cropper实例不存在，无法打开裁剪器')
-        return
-      }
+    if (!cropper.value) {
+      console.warn('Cropper实例不存在，无法打开裁剪器')
+      return
+    }
   }
 
   return {

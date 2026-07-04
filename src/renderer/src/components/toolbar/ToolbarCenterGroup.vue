@@ -7,8 +7,8 @@ defineProps({
 
 <template>
   <div class="group">
-    <button @click="cropper.zoom(0.1)" title="放大 (键盘: + 键)">➕ 放大</button>
-    <button @click="cropper.zoom(-0.1)" title="缩小 (键盘: - 键)">➖ 缩小</button>
+    <button title="放大 (键盘: + 键)" @click="cropper.zoom(0.1)">➕ 放大</button>
+    <button title="缩小 (键盘: - 键)" @click="cropper.zoom(-0.1)">➖ 缩小</button>
     <button @click="cropper.rotate(-90)">↺ 左旋</button>
     <button @click="cropper.rotate(90)">↻ 右旋</button>
     <button @click="cropper.fitToScreen()">📺 自适应屏幕</button>
@@ -25,21 +25,22 @@ defineProps({
 /* ==================== 通用按钮样式 ==================== */
 button {
   padding: 0.5rem 1rem;
-  background-color: #4b4b4b;
-  color: white;
+  background-color: var(--btn-bg);
+  color: var(--btn-text);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 0.9rem;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-normal);
   white-space: nowrap;
 }
 
 button:hover {
-  background-color: #1177bb;
+  background-color: var(--btn-bg-hover);
+  color: #ffffff;
 }
 
 button:active {
-  background-color: #0d5a8f;
+  background-color: var(--btn-bg-active);
 }
 </style>

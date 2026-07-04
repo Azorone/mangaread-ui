@@ -1,56 +1,57 @@
 <script setup>
-// Props
 defineProps({
   sidebar: Object
 })
 </script>
 
 <template>
-  <!-- 阅读历史侧边栏 -->
   <div v-if="sidebar.showHistory.value" class="sidebar history-sidebar">
     <div class="sidebar-header">
       <h3>⏱️ 阅读历史</h3>
       <button class="close-sidebar-btn" @click="sidebar.toggleHistory()">✕</button>
     </div>
     <div class="sidebar-content">
-      <div v-if="sidebar.historyList.value.length > 0" class="history-list">
-        <div 
-          v-for="(item, i) in sidebar.historyList.value" 
+      <div
+        v-if="sidebar.historyList.value && sidebar.historyList.value.length > 0"
+        class="history-list"
+      >
+        <div
+          v-for="(item, i) in sidebar.historyList.value"
           :key="i"
           class="history-item"
           @click="sidebar.selectHistory(item)"
         >
-          <div class="history-title">{{ item.mangaTitle }}</div>
-          <div class="history-meta">第{{ item.page }}页</div>
+          <div class="history-title">{{ item.manganame }}</div>
+          <div class="history-meta">{{ item.chaptername }} - 第{{ item.pageindex + 1 }}页</div>
           <div class="history-time">{{ item.timestamp }}</div>
         </div>
       </div>
       <div v-else class="empty-message">暂无阅读历史</div>
     </div>
-    <!-- 清空历史按钮 -->
-    <div v-if="sidebar.historyList.value.length > 0" class="sidebar-footer">
-      <button class="clear-btn" @click="sidebar.clearHistory()">🗑️ 清空历史</button>
+    <div
+      v-if="sidebar.historyList.value && sidebar.historyList.value.length > 0"
+      class="sidebar-footer"
+    >
+      <button class="clear-btn" @click="sidebar.clearHistory()">清空历史</button>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* ==================== 侧边栏通用样式 ==================== */
 .sidebar {
   position: fixed;
   left: 0;
   top: 0;
   width: 300px;
   height: 100vh;
-  background-color: #2a2a2a;
-  border-right: 1px solid #444;
+  background-color: var(--bg-panel);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   z-index: 100;
-  animation: slideIn 0.3s ease-out;
+  animation: slideIn var(--transition-slow) ease-out;
 }
 
-/* 滑入关键帧 */
 @keyframes slideIn {
   from {
     transform: translateX(-100%);
@@ -60,45 +61,41 @@ defineProps({
   }
 }
 
-/* ==================== 侧边栏头部样式 ==================== */
 .sidebar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  background-color: #1e1e1e;
-  border-bottom: 1px solid #444;
+  background-color: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .sidebar-header h3 {
   margin: 0;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 1.1rem;
 }
 
-/* 关闭侧边栏按钮 */
 .close-sidebar-btn {
   background: none;
   border: none;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0;
-  transition: color 0.2s;
+  transition: color var(--transition-normal);
 }
 
 .close-sidebar-btn:hover {
-  color: #0e639c;
+  color: var(--highlight-blue);
 }
 
-/* ==================== 侧边栏内容区域 ==================== */
 .sidebar-content {
   flex: 1;
   overflow-y: auto;
   padding: 0.5rem 0;
 }
 
-/* ==================== 阅读历史列表样式 ==================== */
 .history-list {
   display: flex;
   flex-direction: column;
@@ -106,57 +103,49 @@ defineProps({
   padding: 0.5rem;
 }
 
-/* 历史项 */
 .history-item {
   padding: 0.75rem;
-  background-color: #1e1e1e;
-  border-radius: 4px;
-  border-left: 3px solid #0e639c;
+  background-color: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--highlight-blue);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-normal);
 }
 
-/* 历史项悬停效果 */
 .history-item:hover {
-  background-color: #3a3a3a;
+  background-color: var(--bg-panel);
 }
 
-/* 历史标题 */
 .history-title {
-  color: #fff;
+  color: var(--text-primary);
   font-weight: bold;
   font-size: 0.95rem;
   margin-bottom: 0.25rem;
 }
 
-/* 历史元数据（章节+页码） */
 .history-meta {
-  color: #aaa;
+  color: var(--text-muted);
   font-size: 0.85rem;
   margin-bottom: 0.25rem;
 }
 
-/* 历史时间 */
 .history-time {
-  color: #666;
+  color: var(--text-dim);
   font-size: 0.75rem;
 }
 
-/* 空状态提示 */
 .empty-message {
   padding: 2rem 1rem;
   text-align: center;
-  color: #666;
+  color: var(--text-dim);
   font-size: 0.9rem;
 }
 
-/* ==================== 侧边栏底部按钮 ==================== */
 .sidebar-footer {
   padding: 1rem;
   border-top: 1px solid #444;
 }
 
-/* 清空按钮 */
 .clear-btn {
   width: 100%;
   padding: 0.75rem;

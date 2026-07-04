@@ -8,12 +8,19 @@ const props = defineProps({
   sidebar: Object,
   cropper: Object,
   pagination: Object,
+  theme: Object,
+  appVersion: String,
   openScreenshotsFolder: Function,
   openMangaStoreFolder: Function
 })
 
 // Emits
-defineEmits(['showImportPanel', 'cleanCroppedList', 'clearScreenshots', 'openScreenshotsFolder', 'openMangaStoreFolder'])
+defineEmits([
+  'cleanCroppedList',
+  'clearScreenshots',
+  'openScreenshotsFolder',
+  'openMangaStoreFolder'
+])
 
 // 事件处理
 const handleOpenScreenshotsFolder = () => {
@@ -23,26 +30,30 @@ const handleOpenScreenshotsFolder = () => {
 const handleOpenMangaStoreFolder = () => {
   props.openMangaStoreFolder?.()
 }
+
+const openManagerWindow = async () => {
+  await window.api.openManagerWindow()
+}
 </script>
 
 <template>
   <div class="toolbar">
-    <ToolbarLeftGroup 
+    <ToolbarLeftGroup
       :sidebar="sidebar"
-      @showImportPanel="$emit('showImportPanel')"
-      @openScreenshotsFolder="handleOpenScreenshotsFolder"
-      @openMangaStoreFolder="handleOpenMangaStoreFolder"
+      :theme="theme"
+      :app-version="appVersion"
+      :open-manager-window="openManagerWindow"
+      @open-screenshots-folder="handleOpenScreenshotsFolder"
+      @open-manga-store-folder="handleOpenMangaStoreFolder"
     />
-    
-    <ToolbarCenterGroup 
-      :cropper="props.cropper"
-    />
-    
-    <ToolbarRightGroup 
+
+    <ToolbarCenterGroup :cropper="props.cropper" />
+
+    <ToolbarRightGroup
       :cropper="props.cropper"
       :pagination="props.pagination"
-      @cleanCroppedList="$emit('cleanCroppedList')"
-      @clearScreenshots="$emit('clearScreenshots')"
+      @clean-cropped-list="$emit('cleanCroppedList')"
+      @clear-screenshots="$emit('clearScreenshots')"
     />
   </div>
 </template>
@@ -55,8 +66,8 @@ const handleOpenMangaStoreFolder = () => {
   align-items: center;
   gap: 1rem;
   padding: 0.75rem;
-  background: linear-gradient(to right, #2a2a2a, #3a3a3a);
-  border-bottom: 1px solid #444;
+  background: linear-gradient(to right, var(--bg-panel), var(--bg-elevated));
+  border-bottom: 1px solid var(--border-color);
   flex-wrap: wrap;
 }
 </style>

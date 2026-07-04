@@ -81,7 +81,7 @@ export function useKeyboard(pagination, cropper) {
         e.preventDefault()
         cropper.move(0, -10)
         break
-       case 'W':
+      case 'W':
         e.preventDefault()
         cropper.move(0, 20)
         break

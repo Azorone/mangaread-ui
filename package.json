@@ -1,6 +1,6 @@
 {
   "name": "mangareader",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "An Electron application with Vue",
   "main": "./out/main/index.js",
   "author": "example.com",
@@ -12,17 +12,20 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "postinstall": "electron-builder install-app-deps",
+    "version:patch": "npm version patch --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "version:major": "npm version major --no-git-tag-version",
     "build:unpack": "npm run build && electron-builder --dir",
-    "build:win": "npm run build && electron-builder --win",
-    "build:mac": "npm run build && electron-builder --mac",
-    "build:linux": "npm run build && electron-builder --linux"
+    "build:win": "npm version patch --no-git-tag-version && npm run build && electron-builder --win",
+    "build:mac": "npm version patch --no-git-tag-version && npm run build && electron-builder --mac",
+    "build:linux": "npm version patch --no-git-tag-version && npm run build && electron-builder --linux"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "cropperjs": "^1.6.2",
-    "electron-updater": "^6.3.9",
-    "javascript-natural-sort": "^0.7.1"
+    "electron-log": "^5.4.4",
+    "element-plus": "^2.14.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^2.1.0",

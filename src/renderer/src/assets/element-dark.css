@@ -1,0 +1,124 @@
+/* Element Plus Dark Theme Overrides */
+:root {
+  --el-bg-color: #1a1a1a;
+  --el-bg-color-overlay: #2a2a2a;
+  --el-text-color-primary: #e0e0e0;
+  --el-text-color-regular: #d0d0d0;
+  --el-border-color: #444;
+  --el-border-color-darker: #555;
+  --el-fill-color: #2a2a2a;
+  --el-fill-color-blank: #1e1e1e;
+  --el-fill-color-light: #333;
+  --el-color-primary: #409eff;
+  --el-color-primary-light-3: #337ecc;
+  --el-color-primary-dark-2: #66b1ff;
+  --el-mask-color: rgba(0, 0, 0, 0.7);
+}
+
+html.dark {
+  --el-bg-color: #1a1a1a;
+  --el-bg-color-overlay: #2a2a2a;
+}
+
+.el-dialog {
+  --el-dialog-bg-color: #2a2a2a;
+  --el-dialog-title-font-size: 16px;
+  background-color: #2a2a2a;
+}
+
+.el-dialog__header {
+  border-bottom: 1px solid #444;
+  padding: 16px 20px;
+  margin-right: 0;
+}
+
+.el-dialog__title {
+  color: #e0e0e0 !important;
+}
+
+.el-dialog__body {
+  padding: 20px;
+  color: #d0d0d0;
+}
+
+.el-dialog__footer {
+  border-top: 1px solid #444;
+  padding: 12px 20px;
+}
+
+.el-button {
+  --el-button-bg-color: #3a3a3a;
+  --el-button-border-color: #555;
+  --el-button-text-color: #e0e0e0;
+  --el-button-hover-bg-color: #4a4a4a;
+  --el-button-hover-border-color: #666;
+  --el-button-hover-text-color: #fff;
+}
+
+.el-button--primary {
+  --el-button-bg-color: #409eff;
+  --el-button-border-color: #409eff;
+  --el-button-hover-bg-color: #66b1ff;
+  --el-button-hover-border-color: #66b1ff;
+}
+
+.el-message-box {
+  --el-messagebox-bg-color: #2a2a2a;
+  --el-messagebox-title-color: #e0e0e0;
+  --el-messagebox-content-color: #d0d0d0;
+  background-color: #2a2a2a;
+}
+
+.el-message-box__title {
+  color: #e0e0e0 !important;
+}
+
+.el-message-box__message {
+  color: #d0d0d0 !important;
+}
+
+.el-message-box__headerbtn .el-message-box__close {
+  color: #aaa !important;
+}
+
+.el-input__wrapper {
+  background-color: #1e1e1e !important;
+  box-shadow: 0 0 0 1px #444 inset !important;
+}
+
+.el-input__inner {
+  color: #e0e0e0 !important;
+}
+
+.el-message {
+  --el-message-bg-color: #2a2a2a;
+  --el-message-text-color: #d0d0d0;
+  background-color: #2a2a2a;
+  border-color: #444;
+}
+
+.el-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.el-dialog__close {
+  color: #aaa !important;
+}
+
+.el-dialog__close:hover {
+  color: #fff !important;
+}
+
+.el-dialog.lightbox-dialog {
+  background: none !important;
+  box-shadow: none !important;
+}
+
+.el-dialog.lightbox-dialog .el-dialog__header,
+.el-dialog.lightbox-dialog .el-dialog__footer {
+  display: none;
+}
+
+.el-dialog.lightbox-dialog .el-dialog__body {
+  padding: 0;
+}
